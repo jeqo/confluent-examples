@@ -9,9 +9,11 @@ import java.io.InputStream;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Random;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
 public class ProducerProtoExample {
     private static Properties configs = new Properties();
@@ -38,16 +40,21 @@ public class ProducerProtoExample {
                     .build();
             String recordKey = device.getDeviceID();
             ProducerRecord<String, SensorReading> record =
-                    new ProducerRecord<>("SensorReading", recordKey,
+                    new ProducerRecord<>("test-protobuf", recordKey,
                             SensorReading.newBuilder()
                                     .setDevice(device)
                                     .setDateTime(new Date().getTime())
                                     .setReading(new Random().nextDouble())
                                     .build());
-            producer.send(record, (metadata, exception) -> {
-                System.out.println(String.format(
-                        "Reading sent to partition %d with offset %d",
-                        metadata.partition(), metadata.offset()));
+            producer.send(record, new Callback() {
+                @Override
+                public void onCompletion(RecordMetadata m, Exception e) {
+                    if (e != null) {
+                        e.printStackTrace();
+                    } else {
+                        System.out.printf("Produced record to topic %s partition [%d] @ offset %d%n", m.topic(), m.partition(), m.offset());
+                    }
+                }
             });
         }
     }
